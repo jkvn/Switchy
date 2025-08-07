@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/jkvn/Switchy/internal/sdk"
 	"github.com/spf13/cobra"
 )
 
@@ -11,11 +13,36 @@ func init() {
 }
 
 var listCmd = &cobra.Command{
-	Use:     "list",
-	Short:   "List available SDKs",
-	Example: "switchy list",
+	Use:     "list [sdk]",
+	Short:   "List available SDKs or versions",
+	Example: "switchy list           # List SDK types\nswitchy list java    # List Java versions",
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Available SDKs:")
-		// Waiting for implementation
+		if len(args) == 0 {
+			sdkTypes, err := sdk.GetSdkTypes()
+			if err != nil {
+				fmt.Println("Error fetching SDK types:", err)
+				return
+			}
+
+			fmt.Println("Available SDK Types:")
+			for _, sdkType := range sdkTypes {
+				fmt.Println("-", sdkType)
+			}
+			return
+		}
+
+		sdkType := strings.ToLower(args[0])
+
+		versions, err := sdk.GetSdks(sdkType)
+		if err != nil {
+			fmt.Printf("Error fetching SDKs for %s: %v\n", sdkType, err)
+			return
+		}
+
+		fmt.Printf("Available versions for %s:\n", sdkType)
+		for _, v := range versions {
+			fmt.Printf("- %s (%s)\n", v.Version, v.Link)
+		}
 	},
 }
