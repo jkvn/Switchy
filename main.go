@@ -1,7 +1,7 @@
 package main
 
-import switchy "github.com/jkvn/Switchy/cmd"
+import "github.com/jkvn/Switchy/cmd"
 
 func main() {
-	switchy.Main()
+	cmd.Execute()
 }

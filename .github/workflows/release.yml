@@ -23,6 +23,12 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Extract version and commit
+        id: vars
+        run: |
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - name: Build binary
         shell: bash
         run: |
@@ -31,16 +37,18 @@ jobs:
           GOARCH=amd64
 
           case "$GOOS" in
-          ubuntu)   GOOS=linux   ;;
-          macos)    GOOS=darwin  ;;
-          windows)  GOOS=windows ;;
+            ubuntu)   GOOS=linux   ;;
+            macos)    GOOS=darwin  ;;
+            windows)  GOOS=windows ;;
           esac
 
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
 
           echo "Building for $GOOS/$GOARCH..."
-          GOOS=$GOOS GOARCH=$GOARCH go build -o dist/switchy-${GOOS}-${GOARCH}${EXT} .
+          GOOS=$GOOS GOARCH=$GOARCH \
+          go build -ldflags "-X github.com/jkvn/Switchy/internal/core.Version=${{ steps.vars.outputs.version }} -X github.com/jkvn/Switchy/internal/core.Commit=${{ steps.vars.outputs.commit }}" \
+          -o dist/switchy-${GOOS}-${GOARCH}${EXT} .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
