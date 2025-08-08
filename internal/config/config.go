@@ -11,7 +11,7 @@ import (
 
 const (
 	configFileName = "switchy.conf"
-	defaultSDKPath = ".switchy/sdks"
+	defaultSDKPath = ".switchy"
 )
 
 type Config struct {

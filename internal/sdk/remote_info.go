@@ -1,9 +1,6 @@
 package sdk
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,19 +8,35 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/jkvn/Switchy/internal/config"
+	"github.com/mholt/archiver"
+	"github.com/schollz/progressbar/v3"
 )
 
 const SdkJsonUrl = "https://raw.githubusercontent.com/jkvn/Switchy/refs/heads/main/sdk/sdkVersions.json"
 
-func GetSdkTypes() ([]string, error) {
+func getSdkList() (*SDKList, error) {
 	resp, err := http.Get(SdkJsonUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch SDK list from %s: %w", SdkJsonUrl, err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch SDK list: received status code %d", resp.StatusCode)
+	}
+
 	var list SDKList
 	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
+		return nil, fmt.Errorf("failed to decode SDK list JSON: %w", err)
+	}
+	return &list, nil
+}
+
+func GetSdkTypes() ([]string, error) {
+	list, err := getSdkList()
+	if err != nil {
 		return nil, err
 	}
 
@@ -35,14 +48,8 @@ func GetSdkTypes() ([]string, error) {
 }
 
 func GetSdks(typeName string) ([]Version, error) {
-	resp, err := http.Get(SdkJsonUrl)
+	list, err := getSdkList()
 	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var list SDKList
-	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
 		return nil, err
 	}
 
@@ -54,7 +61,17 @@ func GetSdks(typeName string) ([]Version, error) {
 	return nil, fmt.Errorf("SDK type %q not found", typeName)
 }
 
-func  DownloadSdk(sdkType, version string) (string, error) {
+func DownloadSdk(sdkType, version string) (string, error) {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to load config: %w", err)
+	}
+
+	downloadCacheDir := filepath.Join(cfg.DefaultSdkPath, "cache")
+	if err := os.MkdirAll(downloadCacheDir, 0755); err != nil {
+		return "", fmt.Errorf("error creating download cache directory '%s': %w", downloadCacheDir, err)
+	}
+
 	versions, err := GetSdks(sdkType)
 	if err != nil {
 		return "", err
@@ -64,147 +81,115 @@ func  DownloadSdk(sdkType, version string) (string, error) {
 		if v.Version == version {
 			resp, err := http.Get(v.Link)
 			if err != nil {
-				return "", fmt.Errorf("failed to download SDK: %w", err)
+				return "", fmt.Errorf("failed to download SDK from %s: %w", v.Link, err)
 			}
 			defer resp.Body.Close()
 
 			if resp.StatusCode != http.StatusOK {
-				return "", fmt.Errorf("failed to download SDK: %s", resp.Status)
+				return "", fmt.Errorf("failed to download SDK: received status code %d (%s)", resp.StatusCode, resp.Status)
 			}
 
-			var ext string
-			if strings.HasSuffix(v.Link, ".tar.gz") {
-				ext = ".tar.gz"
-			} else if strings.HasSuffix(v.Link, ".zip") {
-				ext = ".zip"
-			} else {
-				ext = ""
-			}
+			bar := progressbar.DefaultBytes(resp.ContentLength, fmt.Sprintf("Downloading %s %s", sdkType, version))
 
-			fileName := fmt.Sprintf("%s-%s%s", sdkType, version, ext)
+			ext := getArchiveExtension(v.Link)
+			fileName := filepath.Join(downloadCacheDir, fmt.Sprintf("%s-%s%s", sdkType, version, ext))
 			file, err := os.Create(fileName)
 			if err != nil {
-				return "", fmt.Errorf("failed to create file: %w", err)
+				return "", fmt.Errorf("failed to create file '%s': %w", fileName, err)
 			}
 			defer file.Close()
 
-			if _, err := io.Copy(file, resp.Body); err != nil {
-				return "", fmt.Errorf("failed to save SDK: %w", err)
+			if _, err := io.Copy(io.MultiWriter(file, bar), resp.Body); err != nil {
+				return "", fmt.Errorf("failed to save SDK to file: %w", err)
 			}
 
-			fmt.Printf("SDK %s version %s downloaded successfully.\n", sdkType, version)
+			fmt.Printf("\nSDK %s version %s downloaded successfully to %s.\n", sdkType, version, fileName)
 			return fileName, nil
 		}
 	}
 	return "", fmt.Errorf("version %q not found for SDK type %q", version, sdkType)
 }
 
-func ExtractSdk(fileName string) error {
-	var destDir string
-	if strings.HasSuffix(fileName, ".tar.gz") {
-		destDir = strings.TrimSuffix(fileName, ".tar.gz")
-	} else if strings.HasSuffix(fileName, ".zip") {
-		destDir = strings.TrimSuffix(fileName, ".zip")
-	} else {
-		return fmt.Errorf("unknown archive format: %s", fileName)
+func getArchiveExtension(link string) string {
+	if strings.HasSuffix(link, ".tar.gz") {
+		return ".tar.gz"
 	}
-
-	// Create the destination directory if it does not exist
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return fmt.Errorf("error creating destination directory: %w", err)
+	if strings.HasSuffix(link, ".tar.xz") {
+		return ".tar.xz"
 	}
-
-	if strings.HasSuffix(fileName, ".tar.gz") {
-		// Open the file
-		f, err := os.Open(fileName)
-		if err != nil {
-			return fmt.Errorf("error opening file: %w", err)
-		}
-		defer f.Close()
-
-		gzr, err := gzip.NewReader(f)
-		if err != nil {
-			return fmt.Errorf("error creating gzip reader: %w", err)
-		}
-		defer gzr.Close()
-
-		tr := tar.NewReader(gzr)
-		for {
-			header, err := tr.Next()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return fmt.Errorf("error reading tar archive: %w", err)
-			}
-
-			targetPath := filepath.Join(destDir, header.Name)
-			switch header.Typeflag {
-			case tar.TypeDir:
-				if err := os.MkdirAll(targetPath, os.FileMode(header.Mode)); err != nil {
-					return fmt.Errorf("error creating directory %s: %w", targetPath, err)
-				}
-			case tar.TypeReg:
-				if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-					return fmt.Errorf("error creating directory %s: %w", filepath.Dir(targetPath), err)
-				}
-				outFile, err := os.Create(targetPath)
-				if err != nil {
-					return fmt.Errorf("error creating file %s: %w", targetPath, err)
-				}
-				if _, err := io.Copy(outFile, tr); err != nil {
-					outFile.Close()
-					return fmt.Errorf("error writing file %s: %w", targetPath, err)
-				}
-				outFile.Close()
-				if err := os.Chmod(targetPath, os.FileMode(header.Mode)); err != nil {
-					return fmt.Errorf("error setting permissions for %s: %w", targetPath, err)
-				}
-			}
-		}
-	} else if strings.HasSuffix(fileName, ".zip") {
-		r, err := zip.OpenReader(fileName)
-		if err != nil {
-			return fmt.Errorf("error opening ZIP archive: %w", err)
-		}
-		defer r.Close()
-
-		for _, f := range r.File {
-			fpath := filepath.Join(destDir, f.Name)
-			if f.FileInfo().IsDir() {
-				if err := os.MkdirAll(fpath, f.Mode()); err != nil {
-					return fmt.Errorf("error creating directory %s: %w", fpath, err)
-				}
-				continue
-			}
-
-			if err := os.MkdirAll(filepath.Dir(fpath), 0755); err != nil {
-				return fmt.Errorf("error creating directory %s: %w", filepath.Dir(fpath), err)
-			}
-
-			outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				return fmt.Errorf("error creating file %s: %w", fpath, err)
-			}
-
-			rc, err := f.Open()
-			if err != nil {
-				outFile.Close()
-				return fmt.Errorf("error opening file in ZIP: %w", err)
-			}
-
-			_, err = io.Copy(outFile, rc)
-			outFile.Close()
-			rc.Close()
-			if err != nil {
-				return fmt.Errorf("error writing file %s: %w", fpath, err)
-			}
-		}
-	} else {
-		return fmt.Errorf("unknown archive format: %s", fileName)
+	if strings.HasSuffix(link, ".tar.bz2") {
+		return ".tar.bz2"
 	}
-
-	fmt.Printf("SDK successfully extracted to %s\n", destDir)
-	return nil
+	return filepath.Ext(link)
 }
 
+func ExtractSdk(fileName string, sdkType string, version string) error {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	finalDestDir := filepath.Join(cfg.DefaultSdkPath, "sdks", sdkType, version)
+	tempExtractDir := filepath.Join(os.TempDir(), fmt.Sprintf("switchy_extract_temp_%d", os.Getpid()))
+
+	if err := os.MkdirAll(finalDestDir, 0755); err != nil {
+		return fmt.Errorf("error creating final destination directory '%s': %w", finalDestDir, err)
+	}
+	if err := os.MkdirAll(tempExtractDir, 0755); err != nil {
+		return fmt.Errorf("error creating temporary extraction directory '%s': %w", tempExtractDir, err)
+	}
+	defer os.RemoveAll(tempExtractDir)
+
+	err = archiver.Unarchive(fileName, tempExtractDir)
+	if err != nil {
+		decompressedFileName := strings.TrimSuffix(filepath.Base(fileName), filepath.Ext(fileName))
+		tempDecompressedPath := filepath.Join(os.TempDir(), decompressedFileName)
+
+		decompressErr := archiver.DecompressFile(fileName, tempDecompressedPath)
+		if decompressErr != nil {
+			return fmt.Errorf("failed to extract or decompress '%s': %w (original unarchive error: %v)", fileName, decompressErr, err)
+		}
+		defer os.Remove(tempDecompressedPath)
+
+		unarchiveDecompressedErr := archiver.Unarchive(tempDecompressedPath, tempExtractDir)
+		if unarchiveDecompressedErr != nil {
+			finalFilePath := filepath.Join(finalDestDir, filepath.Base(tempDecompressedPath))
+			if err := os.Rename(tempDecompressedPath, finalFilePath); err != nil {
+				return fmt.Errorf("failed to move decompressed file '%s' to '%s': %w", tempDecompressedPath, finalFilePath, err)
+			}
+			fmt.Printf("SDK successfully extracted (decompressed single file) to %s\n", finalFilePath)
+			return nil
+		}
+	}
+
+	entries, err := os.ReadDir(tempExtractDir)
+	if err != nil {
+		return fmt.Errorf("failed to read temporary extraction directory '%s': %w", tempExtractDir, err)
+	}
+
+	if len(entries) == 1 && entries[0].IsDir() {
+		sourcePath := filepath.Join(tempExtractDir, entries[0].Name())
+		items, err := os.ReadDir(sourcePath)
+		if err != nil {
+			return fmt.Errorf("failed to read inner directory '%s': %w", sourcePath, err)
+		}
+		for _, item := range items {
+			oldPath := filepath.Join(sourcePath, item.Name())
+			newPath := filepath.Join(finalDestDir, item.Name())
+			if err := os.Rename(oldPath, newPath); err != nil {
+				return fmt.Errorf("failed to move item '%s' to '%s': %w", oldPath, newPath, err)
+			}
+		}
+	} else {
+		for _, entry := range entries {
+			oldPath := filepath.Join(tempExtractDir, entry.Name())
+			newPath := filepath.Join(finalDestDir, entry.Name())
+			if err := os.Rename(oldPath, newPath); err != nil {
+				return fmt.Errorf("failed to move entry '%s' to '%s': %w", oldPath, newPath, err)
+			}
+		}
+	}
+
+	fmt.Printf("SDK successfully extracted to %s\n", finalDestDir)
+	return nil
+}
