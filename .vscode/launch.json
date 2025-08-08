@@ -4,13 +4,17 @@
     // Weitere Informationen finden Sie unter https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
         {
             "name": "Launch Package",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${fileDirname}"
+            "program": "${workspaceFolder}",
+            "args": [
+                "use",
+                "java",
+                "24.0.2"
+             ]
         }
     ]
 }

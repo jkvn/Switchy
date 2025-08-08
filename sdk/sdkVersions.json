@@ -2,22 +2,12 @@
   "sdks": [
     {
       "name": "java",
-      "defaultVersion": "17.0.2",
+      "defaultVersion": "24.0.2",
       "versions": [
         {
-          "version": "11.0.26",
-          "link": "https://openjdk-sources.osci.io/openjdk11/openjdk-11.0.26+4.tar.xz",
-          "sha256": "todo"
-        },
-        {
-          "version": "17.0.15",
-          "link": "https://download.oracle.com/java/17/archive/jdk-17.0.15_linux-x64_bin.tar.gz",
-          "sha256": "todo"
-        },
-        {
-          "version": "21.0.6",
-          "link": "https://download.oracle.com/java/21/archive/jdk-21.0.6_linux-x64_bin.tar.gz",
-          "sha256": "todo"
+          "version": "21.0.8",
+          "link": "https://download.oracle.com/java/21/latest/jdk-21_linux-aarch64_bin.tar.gz",
+          "sha256": "708064ee3a1844245d83be483ff42cc9ca0c482886a98be7f889dff69ac77850"
         },
         {
           "version": "24.0.2",
