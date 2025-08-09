@@ -10,6 +10,11 @@
           "sha256": "708064ee3a1844245d83be483ff42cc9ca0c482886a98be7f889dff69ac77850"
         },
         {
+          "version": "21.0.8-sha",
+          "link": "https://download.oracle.com/java/21/latest/jdk-21_linux-aarch64_bin.tar.gz",
+          "sha256": "test"
+        },
+        {
           "version": "24.0.2",
           "link": "https://download.oracle.com/java/24/latest/jdk-24_linux-aarch64_bin.tar.gz",
           "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
