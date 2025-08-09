@@ -19,11 +19,11 @@ type Config struct {
 }
 
 func GetConfigPath() (string, error) {
-	configDir, err := os.UserConfigDir()
+	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(configDir, "switchy", configFileName), nil
+	return filepath.Join(dir, "switchy", configFileName), nil
 }
 
 func EnsureConfigFile() (string, error) {
@@ -31,20 +31,18 @@ func EnsureConfigFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
-
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		defaultPath := filepath.Join(os.Getenv("HOME"), defaultSDKPath)
-		content := fmt.Sprintf("# Switchy config\ndefault_sdk_path=%s\n", defaultPath)
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		home, _ := os.UserHomeDir()
+		def := filepath.Join(home, defaultSDKPath)
+		content := fmt.Sprintf("default_sdk_path=%s\n", def)
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			return "", err
 		}
 	}
-
 	return path, nil
 }
 
@@ -53,37 +51,31 @@ func LoadConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
 	cfg := &Config{}
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			return nil, errors.New("invalid config line: " + line)
+		kv := strings.SplitN(line, "=", 2)
+		if len(kv) != 2 {
+			return nil, errors.New("invalid config line")
 		}
-		key := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
-
-		switch key {
-		case "default_sdk_path":
-			cfg.DefaultSdkPath = val
+		k := strings.TrimSpace(kv[0])
+		v := strings.TrimSpace(kv[1])
+		if k == "default_sdk_path" {
+			cfg.DefaultSdkPath = v
 		}
 	}
-
 	if cfg.DefaultSdkPath == "" {
-		cfg.DefaultSdkPath = filepath.Join(os.Getenv("HOME"), defaultSDKPath)
+		home, _ := os.UserHomeDir()
+		cfg.DefaultSdkPath = filepath.Join(home, defaultSDKPath)
 	}
-
 	return cfg, nil
 }

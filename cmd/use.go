@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"io"
 	"log"
 	"strings"
 
 	"github.com/jkvn/Switchy/internal/local"
 	"github.com/jkvn/Switchy/internal/sdk"
 	"github.com/jucardi/go-streams/streams"
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -24,25 +26,40 @@ var useCmd = &cobra.Command{
 			log.Println("Usage: switchy use [sdkType] [version]")
 			return
 		}
-
 		sdkType := strings.ToLower(args[0])
+		version := args[1]
 
 		versions, err := sdk.GetSdks(sdkType)
 		if err != nil {
 			log.Printf("Error fetching SDKs for %s: %v\n", sdkType, err)
 			return
 		}
-
-		version := args[1]
 		found := streams.From(versions).AnyMatch(func(i any) bool {
 			return i.(sdk.Version).Version == version
 		})
-
 		if !found {
 			log.Printf("Version %s is not available for %s.\n", version, sdkType)
 			return
 		}
 
-		local.SetSdkVersion(sdkType, version)
+		sdk.ProgressWriterFactory = func(total int64) io.Writer {
+			return progressbar.DefaultBytes(total, sdkType+" "+version)
+		}
+		defer func() { sdk.ProgressWriterFactory = nil }()
+
+		path, err := sdk.DownloadSdk(sdkType, version)
+		if err != nil {
+			log.Printf("Download failed: %v\n", err)
+			return
+		}
+		if err := sdk.ExtractSdk(path, sdkType, version); err != nil {
+			log.Printf("Extract failed: %v\n", err)
+			return
+		}
+		if err := local.SetSdkVersion(sdkType, version); err != nil {
+			log.Printf("Activate failed: %v\n", err)
+			return
+		}
+		log.Printf("Using %s %s\n", sdkType, version)
 	},
 }
