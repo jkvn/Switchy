@@ -25,7 +25,7 @@ var listCmd = &cobra.Command{
 				return
 			}
 
-			fmt.Println("Available SDK Types:")
+			fmt.Println("Available SDK types:")
 			for _, sdkType := range sdkTypes {
 				fmt.Println("-", sdkType)
 			}

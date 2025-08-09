@@ -23,7 +23,7 @@ var useCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			log.Println("Usage: switchy use [sdkType] [version]")
+			log.Println("Usage:", cmd.Use)
 			return
 		}
 		sdkType := strings.ToLower(args[0])
