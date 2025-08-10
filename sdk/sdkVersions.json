@@ -9,15 +9,15 @@
           "platforms": {
             "linux": {
               "link": "https://download.oracle.com/java/21/latest/jdk-21_linux-aarch64_bin.tar.gz",
-              "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
+              "sha256": "708064ee3a1844245d83be483ff42cc9ca0c482886a98be7f889dff69ac77850"
             },
             "windows": {
-              "link": "",
-              "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
+              "link": "https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.zip",
+              "sha256": "174aaf80b21860657bbc024fcfadf092fc43653a308383ee04b2e5406972cc2a"
             },
             "macos": {
-              "link": "",
-              "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
+              "link": "https://download.oracle.com/java/21/latest/jdk-21_macos-aarch64_bin.tar.gz",
+              "sha256": "421afea21e96332c40a019846c0c7a211a72c4bcd2b29911dcb50d2f58533ab1"
             }
           }
         },
@@ -29,12 +29,12 @@
               "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
             },
             "windows": {
-              "link": "",
-              "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
+              "link": "https://download.oracle.com/java/24/latest/jdk-24_windows-x64_bin.zip",
+              "sha256": "662c8db2d7bb99627e4b34e0fd1160ee3d01230dd5ff2efd903528470d0fbe0d"
             },
             "macos": {
-              "link": "",
-              "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
+              "link": "https://download.oracle.com/java/24/latest/jdk-24_macos-aarch64_bin.tar.gz",
+              "sha256": "100c5088cce9a61e0879b06cb040302aa50afeeaa1475db63b5b78a99b0d8cf8"
             }
           }
         }
