@@ -15,7 +15,7 @@ func init() {
 var listCmd = &cobra.Command{
 	Use:     "list [sdk]",
 	Short:   "List available SDKs or versions",
-	Example: "switchy list           # List SDK types\nswitchy list java    # List Java versions",
+	Example: "switchy list",
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
@@ -25,7 +25,7 @@ var listCmd = &cobra.Command{
 				return
 			}
 
-			fmt.Println("Available SDK Types:")
+			fmt.Println("Available SDK types:")
 			for _, sdkType := range sdkTypes {
 				fmt.Println("-", sdkType)
 			}
@@ -42,7 +42,7 @@ var listCmd = &cobra.Command{
 
 		fmt.Printf("Available versions for %s:\n", sdkType)
 		for _, v := range versions {
-			fmt.Printf("- %s (%s)\n", v.Version, v.Link)
+			fmt.Printf("- Version %s (%s)\n", v.Version, v.Link)
 		}
 	},
 }
