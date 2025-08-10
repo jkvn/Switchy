@@ -6,7 +6,7 @@
       "versions": [
         {
           "version": "21.0.8",
-          "plattforms": {
+          "platforms": {
             "linux": {
               "link": "https://download.oracle.com/java/21/latest/jdk-21_linux-aarch64_bin.tar.gz",
               "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
@@ -22,23 +22,8 @@
           }
         },
         {
-<<<<<<< HEAD
-          "version": "17.0.15",
-          "link": "https://download.oracle.com/java/17/archive/jdk-17.0.15_linux-x64_bin.tar.gz",
-          "sha256": "todo"
-        },
-        {
-          "version": "21.0.6",
-          "link": "https://download.oracle.com/java/21/archive/jdk-21.0.6_linux-x64_bin.tar.gz",
-          "sha256": "todo"
-        },
-        {
           "version": "24.0.2",
-          "link": "https://download.oracle.com/java/24/latest/jdk-24_linux-aarch64_bin.tar.gz",
-          "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
-=======
-          "version": "24.0.2",
-          "plattforms": {
+          "platforms": {
             "linux": {
               "link": "https://download.oracle.com/java/24/latest/jdk-24_linux-aarch64_bin.tar.gz",
               "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
@@ -52,7 +37,6 @@
               "sha256": "b4e4273c290c7cecdab499fb0729ce9e4bf92de54e109c4f5a942a30e63d0311"
             }
           }
->>>>>>> feature/multiple-plattforms
         }
       ]
     }

@@ -7,9 +7,13 @@ type SDK struct {
 }
 
 type Version struct {
-	Version string `json:"version"`
-	Link    string `json:"link"`
-	Sha256  string `json:"sha256"`
+	Version   string                     `json:"version"`
+	Platforms map[string]VersionPlatform `json:"platforms"`
+}
+
+type VersionPlatform struct {
+	Link   string `json:"link"`
+	Sha256 string `json:"sha256"`
 }
 
 type SDKList struct {
